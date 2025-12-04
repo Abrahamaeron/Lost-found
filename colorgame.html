@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Lost & Found System</title>
+
+<style>
+    body { font-family: Arial; background:#eef2f7; margin:0; }
+    header { background:#2b4f81; padding:18px; color:#fff; text-align:center; }
+    nav { background:#1d355e; padding:10px; text-align:center; }
+    nav a { color:white; margin:0 10px; text-decoration:none; font-size:15px; }
+
+    .container {
+        max-width:850px; margin:20px auto; background:white;
+        padding:20px; border-radius:10px;
+        box-shadow:0 0 10px rgba(0,0,0,0.1);
+    }
+
+    input,textarea,select {
+        width:100%; padding:10px; margin-top:10px;
+        border:1px solid #ccc; border-radius:7px;
+    }
+
+    button {
+        width:100%; padding:12px; margin-top:12px;
+        background:#2b4f81; color:white; border:0;
+        border-radius:7px; font-size:16px;
+    }
+
+    .item {
+        background:#f8f9fb; margin-top:15px; padding:15px;
+        border-left:5px solid #2b4f81; border-radius:8px;
+        display:flex; gap:15px;
+    }
+
+    img.item-img { width:120px; border-radius:6px; object-fit:cover; }
+    footer { text-align:center; background:#2b4f81; color:white; padding:15px; margin-top:30px; }
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>Lost & Found Tracking System</h1>
+</header>
+
+<nav>
+    <a href="#report">Report</a>
+    <a href="#listBox">List</a>
+</nav>
+
+<div class="container" id="report">
+    <h2>Report Item</h2>
+
+    <select id="type">
+        <option value="Lost">Lost Item</option>
+        <option value="Found">Found Item</option>
+    </select>
+
+    <input id="itemName" placeholder="Item name">
+    <textarea id="itemDesc" placeholder="Short description"></textarea>
+
+    <label><b>Upload Picture:</b></label>
+    <input type="file" id="itemImage" accept="image/*">
+
+    <img id="previewImage" style="width:120px; display:none; margin-top:10px; border-radius:6px;"/>
+
+    <button onclick="addItem()">SUBMIT</button>
+
+    <h2>Search</h2>
+    <input type="text" id="search" onkeyup="searchItem()" placeholder="Search...">
+</div>
+
+<div class="container" id="listBox">
+    <h2>Item List</h2>
+    <div id="list"></div>
+
+    <h2 style="margin-top:30px;">Claimed Items</h2>
+    <div id="claimedList"></div>
+</div>
+
+<footer>
+    © 2025 Student Lost & Found Project
+</footer>
+
+<script>
+let items = [];
+let claimed = [];
+
+// IMAGE PREVIEW
+document.getElementById("itemImage").addEventListener("change", e => {
+    const file = e.target.files[0];
+    const prev = document.getElementById("previewImage");
+
+    if (file) {
+        prev.src = URL.createObjectURL(file);
+        prev.style.display = "block";
+    } else {
+        prev.style.display = "none";
+    }
+});
+
+// ADD ITEM
+function addItem() {
+    let type = document.getElementById("type").value;
+    let name = document.getElementById("itemName").value;
+    let desc = document.getElementById("itemDesc").value;
+
+    let file = document.getElementById("itemImage").files[0];
+    let imgURL = file ? URL.createObjectURL(file) : "";
+
+    if (!name || !desc) {
+        alert("Complete all fields");
+        return;
+    }
+
+    items.push({ type, name, desc, img: imgURL });
+    displayItems();
+
+    document.getElementById("itemName").value = "";
+    document.getElementById("itemDesc").value = "";
+    document.getElementById("itemImage").value = "";
+    document.getElementById("previewImage").style.display = "none";
+
+    document.getElementById("listBox").scrollIntoView({ behavior: "smooth" });
+}
+
+// DISPLAY ITEMS
+function displayItems(filtered = null) {
+    let data = filtered || items;
+    let box = document.getElementById("list");
+    box.innerHTML = "";
+
+    data.forEach((item, i) => {
+        box.innerHTML += `
+        <div class="item">
+            <img src="${item.img}" class="item-img">
+            <div>
+                <h3>${item.type}: ${item.name}</h3>
+                <p>${item.desc}</p>
+                <button style="background:#d9534f" onclick="claimItem(${i})">Claim</button>
+            </div>
+        </div>`;
+    });
+}
+
+// CLAIM ITEM
+function claimItem(i) {
+    claimed.push(items[i]);
+    items.splice(i,1);
+    displayItems();
+    displayClaimed();
+}
+
+// DISPLAY CLAIMED
+function displayClaimed() {
+    let c = document.getElementById("claimedList");
+    c.innerHTML = "";
+
+    claimed.forEach(item => {
+        c.innerHTML += `
+        <div class="item">
+            <img src="${item.img}" class="item-img">
+            <div>
+                <h3>${item.type} (CLAIMED)</h3>
+                <p>${item.name}</p>
+                <p>${item.desc}</p>
+            </div>
+        </div>`;
+    });
+}
+
+// SEARCH
+function searchItem() {
+    let s = document.getElementById("search").value.toLowerCase();
+    let f = items.filter(i =>
+        i.name.toLowerCase().includes(s) ||
+        i.desc.toLowerCase().includes(s) ||
+        i.type.toLowerCase().includes(s)
+    );
+    displayItems(f);
+}
+</script>
+
+</body>
+</html>
