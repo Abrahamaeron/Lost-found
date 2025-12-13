@@ -1,0 +1,203 @@
+<!DOCTYPE html><html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lost & Found System</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f2f5f9}
+header{background:#1d355e;color:#fff;padding:18px;text-align:center}
+nav{display:flex;gap:10px;justify-content:center;padding:10px;background:#fff;position:sticky;top:0;z-index:5}
+nav button{border:1px solid #1d355e;background:#fff;color:#1d355e;padding:8px 18px;border-radius:20px;font-weight:600}
+nav button:hover{background:#1d355e;color:#fff}
+.container{display:none;max-width:900px;margin:20px auto;background:#fff;padding:20px;border-radius:12px}
+.container.active{display:block}
+input,textarea,select{width:100%;padding:10px;margin-top:10px;border-radius:8px;border:1px solid #ccc}
+button{margin-top:12px;padding:10px 16px;border:0;border-radius:8px;background:#1d355e;color:#fff}
+button.danger{background:#c0392b}
+.item{background:#f8fafc;padding:14px;border-radius:12px;margin-top:14px;display:flex;gap:14px}
+.item img{width:110px;height:110px;object-fit:cover;border-radius:10px;background:#ddd}
+.actions{display:flex;gap:10px;margin-top:10px}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:10}
+.modal-box{background:#fff;padding:20px;border-radius:14px;width:320px}
+@media(max-width:600px){.item{flex-direction:column}.item img{width:100%;height:160px}}
+</style>
+</head>
+<body>
+<header><h2>Lost & Found Tracking System</h2></header>
+<nav>
+ <button onclick="showPage('report')">Report</button>
+ <button onclick="showPage('list')">Items</button>
+ <button onclick="showPage('claimed')">Claimed</button>
+ <button onclick="openGuide()">Guide</button>
+</nav><div class="container active" id="report">
+ <h3>Report Item</h3>
+ <select id="type"><option>Lost</option><option>Found</option></select>
+ <input id="itemName" placeholder="Item name">
+ <textarea id="itemDesc" placeholder="Description"></textarea>
+ <input type="file" id="itemImg" accept="image/*">
+ <button type="button" onclick="submitItem()">Submit</button>
+</div><div class="container" id="list">
+ <h3>Item List</h3>
+ <input id="search" placeholder="Search" onkeyup="searchItems()">
+ <div id="items"></div>
+</div><div class="container" id="claimed">
+ <h3>Claimed Items</h3>
+ <div id="claimedItems"></div>
+</div><div class="modal" id="claimModal">
+ <div class="modal-box">
+  <h3>Claim Item</h3>
+  <input id="claimName" placeholder="Your name">
+  <input id="claimOther" placeholder="Other info (optional)">
+  <button onclick="confirmClaim()">Confirm</button>
+  <button onclick="closeClaim()">Cancel</button>
+ </div>
+</div><div class="modal" id="removeModal">
+ <div class="modal-box">
+  <h3>Remove Item</h3>
+  <input id="removePass" type="password" placeholder="Enter password" style="margin-top:10px">
+  <button onclick="confirmRemove()" style="margin-top:12px">Submit</button>
+  <button onclick="closeRemove()">Cancel</button>
+ </div>
+</div><div class="modal" id="guideModal">
+ <div class="modal-box">
+  <h3>Guide</h3>
+  <p style="font-size:14px;line-height:1.5">
+   • Fill up the item details correctly.<br>
+   • Upload a photo if available.<br>
+   • After submitting, the item will appear in the Item List.<br>
+   • To claim an item, provide your name and confirm.<br><br>
+   <b>To get the item:</b><br>
+   Visit the <b>Guidance Office</b> at<br>
+   <a href="https://www.google.com/search?q=Gov.+Juanito+Reyes+Remulla+Senior+High+School" target="_blank">
+    Gov. Juanito Reyes Remulla Senior High School
+   </a>
+  </p>
+  <button onclick="closeGuide()">Close</button>
+ </div>
+</div><script>
+let items=JSON.parse(localStorage.getItem('items'))||[];
+let claimed=JSON.parse(localStorage.getItem('claimed'))||[];
+let currentIndex=null;
+let removeIndex=null;
+
+function showPage(id){
+ document.querySelectorAll('.container').forEach(c=>c.classList.remove('active'));
+ document.getElementById(id).classList.add('active');
+ if(id==='list') renderItems();
+ if(id==='claimed') renderClaimed();
+}
+
+function submitItem(){
+ const type=typeSelect().value;
+ const name=itemName.value.trim();
+ const desc=itemDesc.value.trim();
+ const file=itemImg.files[0];
+ if(!name||!desc){alert('Fill all fields');return}
+ const img=file?URL.createObjectURL(file):'';
+ const date=new Date().toLocaleString();
+ items.push({type,name,desc,img,date});
+ localStorage.setItem('items',JSON.stringify(items));
+ itemName.value=''; itemDesc.value=''; itemImg.value='';
+ showPage('list');
+}
+
+function renderItems(){
+ itemsBox().innerHTML='';
+ items.forEach((i,idx)=>{
+  itemsBox().innerHTML+=`<div class="item">
+   <img src="${i.img}">
+   <div>
+    <b>${i.type}: ${i.name}</b>
+    <p>${i.desc}</p>
+    <small>${i.date}</small>
+    <div class="actions">
+     <button onclick="openClaim(${idx})">Claim</button>
+     <button class="danger" onclick="openRemove(${idx})">Remove</button>
+    </div>
+   </div>
+  </div>`;
+ });
+}
+
+function searchItems(){
+ const s=search.value.toLowerCase();
+ itemsBox().innerHTML='';
+ items.forEach((i,idx)=>{
+  if(i.name.toLowerCase().includes(s)||i.desc.toLowerCase().includes(s)){
+   itemsBox().innerHTML+=`<div class="item"><img src="${i.img}"><div><b>${i.name}</b><p>${i.desc}</p></div></div>`;
+  }
+ });
+}
+
+function openClaim(i){currentIndex=i;claimModal.style.display='flex'}
+function closeClaim(){claimModal.style.display='none';currentIndex=null}
+
+function confirmClaim(){
+ const n=claimName.value.trim();
+ if(!n){alert('Enter your name');return}
+ const d=new Date().toLocaleString();
+ claimed.push({...items[currentIndex], claimant:n, claimedDate:d});
+ items.splice(currentIndex,1);
+ localStorage.setItem('items',JSON.stringify(items));
+ localStorage.setItem('claimed',JSON.stringify(claimed));
+ claimName.value=''; claimOther.value='';
+ closeClaim();
+ renderItems();
+}
+
+function renderClaimed(){
+ claimedItems.innerHTML='';
+ claimed.forEach((i,idx)=>{
+  claimedItems.innerHTML+=`<div class="item">
+   <img src="${i.img}">
+   <div>
+    <b>${i.name}</b>
+    <p>Claimed by: ${i.claimant}</p>
+    <small>${i.claimedDate}</small>
+    <div class="actions">
+     <button class="danger" onclick="openRemoveClaimed(${idx})">Remove</button>
+    </div>
+   </div>
+  </div>`;
+ });
+}
+
+function openRemove(i){
+ removeIndex=i;
+ removeModal.style.display='flex';
+ removeModal.dataset.mode='items';
+}
+function closeRemove(){removeModal.style.display='none';removePass.value='';removeIndex=null}
+
+function confirmRemove(){
+ // allow submit even if empty, but require correct password
+ if(removePass.value !== 'Abkial'){
+  alert('Wrong password');
+  return;
+ }
+ if(removeModal.dataset.mode === 'claimed'){
+  claimed.splice(removeIndex,1);
+  localStorage.setItem('claimed', JSON.stringify(claimed));
+  renderClaimed();
+ } else {
+  items.splice(removeIndex,1);
+  localStorage.setItem('items', JSON.stringify(items));
+  renderItems();
+ }
+ closeRemove();
+}
+
+function openRemoveClaimed(i){
+ removeIndex = i;
+ removeModal.dataset.mode = 'claimed';
+ removeModal.style.display = 'flex';
+}
+
+function openGuide(){guideModal.style.display='flex'}
+function closeGuide(){guideModal.style.display='none'}
+
+function typeSelect(){return document.getElementById('type')}
+function itemsBox(){return document.getElementById('items')}
+</script></body>
+</html>
